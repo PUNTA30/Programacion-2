@@ -1,6 +1,6 @@
 # Sistema de Monitoreo: Guardian de Infraestructura v1.0
 
-import datetime  # Librería para manejar fecha y hora
+import datetime  # Librería para manejar fecha y hora.
 
 # Obtener fecha y hora actual
 fecha_hora = datetime.datetime.now()
