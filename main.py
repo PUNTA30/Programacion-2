@@ -49,3 +49,6 @@ except ValueError:
 
 except Exception as e:
     print("\n[ERROR INESPERADO SOCIO]:", e)
+    
+    #cargue 
+    # #
