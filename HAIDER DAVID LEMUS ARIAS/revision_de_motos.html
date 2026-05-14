@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Data Center Guardian + CDN MVP</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body{
+    font-family: 'Segoe UI';
+    background: #0f172a;
+    color: white;
+    margin: 0;
+    padding: 20px;
+}
+
+h2{
+    text-align: center;
+}
+
+.top{
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+input, button{
+    padding: 10px;
+    border-radius: 8px;
+    border: none;
+}
+
+button{
+    background: #22c55e;
+    color: white;
+    cursor: pointer;
+}
+
+.dashboard{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px,1fr));
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.card{
+    background: #1e293b;
+    padding: 15px;
+    border-radius: 12px;
+    text-align: center;
+}
+
+canvas{
+    background: white;
+    border-radius: 10px;
+    margin-top: 15px;
+}
+</style>
+</head>
+
+<body>
+
+<h2>🚀 Data Center Guardian + CDN MVP</h2>
+
+<div class="top">
+    <input type="number" id="n" value="40">
+    <input type="number" id="seed" value="42">
+
+    <button onclick="generar()">Generar</button>
+    <button onclick="analizar()">Analizar</button>
+</div>
+
+<div class="dashboard">
+    <div class="card" id="stats">---</div>
+    <div class="card" id="reporte">---</div>
+    <div class="card" id="cdn">CDN: ---</div>
+</div>
+
+<canvas id="graficaTemp"></canvas>
+<canvas id="graficaCPU"></canvas>
+<canvas id="graficaEstados"></canvas>
+
+<script>
+let servidores = [];
+let seedGlobal = 42;
+
+// 🎯 Random con seed REAL
+function random(){
+    seedGlobal = (seedGlobal * 9301 + 49297) % 233280;
+    return seedGlobal / 233280;
+}
+
+// 📊 Generar datos
+function generar(){
+    let n = parseInt(document.getElementById("n").value);
+    seedGlobal = parseInt(document.getElementById("seed").value);
+
+    servidores = [];
+
+    for(let i=0; i<n; i++){
+        let cpu = 30 + random()*70;
+        let temp = 40 + random()*20 + (cpu * 0.35);
+        let energia = 150 + (cpu * 3) + (random()*40 - 20);
+
+        servidores.push({temp, cpu, energia});
+    }
+
+    document.getElementById("stats").innerText = "Datos generados";
+}
+
+// 🔍 Evaluación
+function evaluar(temp, cpu, energia){
+    if(temp > 75 && cpu > 80) return "CRITICO";
+    if(energia > 400) return "EXCESO";
+    if(temp > 75 || cpu > 80) return "ADVERTENCIA";
+    return "OK";
+}
+
+// 🌐 CDN MVP (simulación)
+function simularCDN(){
+    let latenciaBase = 200; // ms sin CDN
+    let cacheHit = random() > 0.4; // 60% cache
+
+    let latenciaFinal = cacheHit ? latenciaBase * 0.4 : latenciaBase;
+
+    return {
+        cacheHit,
+        latencia: latenciaFinal.toFixed(2)
+    };
+}
+
+// 📊 Análisis
+async function analizar(){
+
+    if(servidores.length === 0){
+        alert("Genera datos primero");
+        return;
+    }
+
+    let cdn = simularCDN();
+
+    document.getElementById("cdn").innerHTML =
+        `🌐 CDN Activo<br>
+         Cache: ${cdn.cacheHit ? "HIT ⚡" : "MISS ❌"}<br>
+         Latencia: ${cdn.latencia} ms`;
+
+    // ⏳ Simular espera real según CDN
+    await new Promise(resolve => setTimeout(resolve, cdn.latencia));
+
+    let temps = servidores.map(s => s.temp);
+    let cpus = servidores.map(s => s.cpu);
+
+    let estados = servidores.map(s => evaluar(s.temp, s.cpu, s.energia));
+
+    let ok = estados.filter(e => e==="OK").length;
+    let adv = estados.filter(e => e==="ADVERTENCIA").length;
+    let crit = estados.filter(e => e==="CRITICO").length;
+    let exc = estados.filter(e => e==="EXCESO").length;
+
+    let promTemp = temps.reduce((a,b)=>a+b,0)/temps.length;
+    let promCPU = cpus.reduce((a,b)=>a+b,0)/cpus.length;
+
+    document.getElementById("stats").innerHTML =
+        `🌡 Temp: ${promTemp.toFixed(2)}°C <br>
+         ⚙ CPU: ${promCPU.toFixed(2)}%`;
+
+    let riesgo = crit>0 ? "ALTO 🔴" : adv>0 ? "MEDIO 🟠" : "BAJO 🟢";
+
+    document.getElementById("reporte").innerHTML =
+        `Riesgo: ${riesgo}<br>
+         OK:${ok} | Adv:${adv} | Crit:${crit} | Exc:${exc}`;
+
+    graficar(temps, cpus, [ok, adv, crit, exc]);
+}
+
+// 📈 Gráficas
+let chart1, chart2, chart3;
+
+function graficar(temps, cpus, estados){
+
+    if(chart1) chart1.destroy();
+    if(chart2) chart2.destroy();
+    if(chart3) chart3.destroy();
+
+    chart1 = new Chart(graficaTemp, {
+        type: "bar",
+        data: {
+            labels: temps.map((_,i)=>i+1),
+            datasets: [{label:"Temperatura", data: temps}]
+        }
+    });
+
+    chart2 = new Chart(graficaCPU, {
+        type: "line",
+        data: {
+            labels: cpus.map((_,i)=>i+1),
+            datasets: [{label:"CPU", data: cpus}]
+        }
+    });
+
+    chart3 = new Chart(graficaEstados, {
+        type: "doughnut",
+        data: {
+            labels: ["OK","Adv","Crit","Exc"],
+            datasets: [{data: estados}]
+        }
+    });
+}
+</script>
+
+</body>
+</html>
